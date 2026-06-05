@@ -1,5 +1,5 @@
 // WorkVoice service worker — offline app shell
-const CACHE = 'workvoice-v1';
+const CACHE = 'workvoice-v2';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
