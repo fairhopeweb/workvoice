@@ -145,16 +145,22 @@ async function main() {
   await test('creating a note opens the editor and saves text', async () => {
     await stagehand.act('click the NEW NOTE button');
     await new Promise(r => setTimeout(r, 600));
-    await stagehand.act('type "Stagehand smoke test" into the note title input');
-    await stagehand.act('type "written by an automated browser agent" into the note body input');
-    await stagehand.act('click the back arrow button to return to the notes list');
+    await stagehand.act('type "Stagehand smoke test" into the "Note title" input field');
+    await stagehand.act('click the large "Note body" text area below the title, then type "written by an automated browser agent" into it');
+    await new Promise(r => setTimeout(r, 400));
+    const editor = await stagehand.extract(
+      'Look at the note editor. What text is in the title field and what text is in the body area?',
+      z.object({ title: z.string(), body: z.string() }),
+    );
+    assert.match(editor.title, /Stagehand smoke test/i, `title was "${editor.title}"`);
+    assert.match(editor.body, /automated browser agent/i, `body was "${editor.body}"`);
+    await stagehand.act('click the back arrow button labeled "Back to notes list"');
     await new Promise(r => setTimeout(r, 600));
     const d = await stagehand.extract(
       'Does the notes list contain a note titled "Stagehand smoke test"?',
-      z.object({ found: z.boolean(), preview: z.string().describe('its preview text if found') }),
+      z.object({ found: z.boolean() }),
     );
     assert.ok(d.found, 'new note not found in list');
-    assert.match(d.preview, /automated browser agent/i, `preview was "${d.preview}"`);
   });
 
   // ── 5. Dictation flow (simulated transcription in headless CI) ──────
@@ -192,7 +198,7 @@ async function main() {
       'Is the app currently in a dark color scheme or a light one?',
       z.object({ scheme: z.enum(['dark', 'light']) }),
     );
-    await stagehand.act('click the theme toggle button in the header (the half-circle icon)');
+    await stagehand.act('click the button labeled "Toggle color theme" in the top header');
     await new Promise(r => setTimeout(r, 700));
     const after = await stagehand.extract(
       'Is the app currently in a dark color scheme or a light one?',

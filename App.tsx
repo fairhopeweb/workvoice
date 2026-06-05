@@ -19,11 +19,13 @@ const Label = ({ t, children, style }: any) => (
   <Text style={[MONO, { fontSize: 10, color: t.ink3, textTransform: 'uppercase' }, style]}>{children}</Text>
 );
 
-const NeoButton = ({ t, onPress, children, glow, style, testID }: any) => {
+const NeoButton = ({ t, onPress, children, glow, style, testID, accessibilityLabel }: any) => {
   const [pressed, setPressed] = useState(false);
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
@@ -361,16 +363,16 @@ export default function App() {
   const Editor = sel && (
     <View testID="editor" style={{ flex: 1, padding: 22, maxWidth: 820, alignSelf: 'center', width: '100%' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <NeoButton t={t} testID="back-btn" onPress={() => setView('notes')} style={{ width: 40, height: 40, padding: 0 }}>
+        <NeoButton t={t} testID="back-btn" accessibilityLabel="Back to notes list" onPress={() => setView('notes')} style={{ width: 40, height: 40, padding: 0 }}>
           <Text style={{ color: t.ink2, fontSize: 16 }}>←</Text>
         </NeoButton>
         <Label t={t}>EDITED {fmtDate(sel.updated).toUpperCase()}</Label>
         <View style={{ flex: 1 }} />
-        <NeoButton t={t} testID="star-btn" onPress={() => update(sel.id, { starred: !sel.starred }, false)}
+        <NeoButton t={t} testID="star-btn" accessibilityLabel="Star this note" onPress={() => update(sel.id, { starred: !sel.starred }, false)}
           style={{ width: 40, height: 40, padding: 0 }}>
           <Text style={{ color: sel.starred ? t.accent : t.ink2, fontSize: 15 }}>★</Text>
         </NeoButton>
-        <NeoButton t={t} testID="delete-btn" onPress={deleteSel} style={{ width: 40, height: 40, padding: 0 }}>
+        <NeoButton t={t} testID="delete-btn" accessibilityLabel="Delete this note" onPress={deleteSel} style={{ width: 40, height: 40, padding: 0 }}>
           <Text style={{ color: t.rec, fontSize: 14 }}>🗑</Text>
         </NeoButton>
       </View>
@@ -379,6 +381,7 @@ export default function App() {
         <View style={[neo.raisedBig(t, 24), { padding: 22 }]}>
           <TextInput
             testID="title-input"
+            accessibilityLabel="Note title"
             value={sel.title}
             onChangeText={v => update(sel.id, { title: v })}
             placeholder="Untitled note"
@@ -407,6 +410,7 @@ export default function App() {
 
           <TextInput
             testID="body-input"
+            accessibilityLabel="Note body"
             value={sel.body}
             onChangeText={v => update(sel.id, { body: v })}
             placeholder="Start typing, or hit the mic to dictate…"
@@ -436,7 +440,7 @@ export default function App() {
         <View style={[neo.insetSm(t, 99), { paddingVertical: 4, paddingHorizontal: 10 }]}>
           <Text style={[MONO, { fontSize: 9, color: t.accentDim }]}>ON-DEVICE</Text>
         </View>
-        <NeoButton t={t} testID="theme-btn" onPress={() => setThemeName(x => (x === 'dark' ? 'light' : 'dark'))}
+        <NeoButton t={t} testID="theme-btn" accessibilityLabel="Toggle color theme" onPress={() => setThemeName(x => (x === 'dark' ? 'light' : 'dark'))}
           style={{ width: 38, height: 38, padding: 0 }}>
           <Text style={{ color: t.ink2, fontSize: 14 }}>◐</Text>
         </NeoButton>
@@ -465,7 +469,7 @@ export default function App() {
           <View style={[neo.raised(t, 99), { paddingVertical: 8, paddingHorizontal: 14 }]}>
             <Label t={t}>TAP TO DICTATE</Label>
           </View>
-          <Pressable testID="rec-btn" onPress={startRec}
+          <Pressable testID="rec-btn" accessibilityLabel="Start voice recording" accessibilityRole="button" onPress={startRec}
             style={[neo.raisedBig(t, 99), { width: 66, height: 66, alignItems: 'center', justifyContent: 'center', boxShadow: `${t.raise}, 0 0 20px rgba(255,77,109,0.2)` }]}>
             <Text style={{ fontSize: 22 }}>🎙</Text>
           </Pressable>
