@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "WorkVoice",
+    "slug": "workvoice",
+    "version": "3.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fairhopeweb.workvoice",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "WorkVoice records audio to transcribe your voice notes on-device."
+      }
+    },
+    "android": {
+      "package": "com.fairhopeweb.workvoice",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#171c23"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "WorkVoice",
+      "shortName": "WorkVoice",
+      "themeColor": "#171c23",
+      "backgroundColor": "#171c23"
+    },
+    "backgroundColor": "#171c23",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#171c23"
+    }
+  }
+}
