@@ -62,16 +62,18 @@ async function main() {
 
   // ── 1. Dashboard is the landing view ────────────────────────────────
   await test('dashboard loads with branding, greeting and 4 stat cards', async () => {
+    const brand = await page.evaluate(
+      "(document.querySelector('[data-testid=brand]')||{}).textContent || ''",
+    );
+    assert.match(String(brand).replace(/\s/g, ''), /WORKVOICE/i, `brand was "${brand}"`);
     const d = await stagehand.extract(
       'Look at the current screen and report what you see',
       z.object({
-        brandText: z.string().describe('the app brand/logo text in the header'),
         greeting: z.string().describe('the large greeting headline, e.g. Good morning'),
         statCardCount: z.number().describe('how many small statistic cards with a number and label are visible'),
         statLabels: z.array(z.string()).describe('the labels of the statistic cards'),
       }),
     );
-    assert.match(d.brandText.toUpperCase().replace(/\s/g, ''), /WORKVOICE/, `brand was "${d.brandText}"`);
     assert.match(d.greeting, /Good (morning|afternoon|evening)/i, `greeting was "${d.greeting}"`);
     assert.equal(d.statCardCount, 4, `expected 4 stat cards, saw ${d.statCardCount}`);
     const labels = d.statLabels.join(' ').toUpperCase();
@@ -145,22 +147,23 @@ async function main() {
   await test('creating a note opens the editor and saves text', async () => {
     await stagehand.act('click the NEW NOTE button');
     await new Promise(r => setTimeout(r, 600));
-    await stagehand.act('type "Stagehand smoke test" into the "Note title" input field');
-    await stagehand.act('click the large "Note body" text area below the title, then type "written by an automated browser agent" into it');
-    await new Promise(r => setTimeout(r, 400));
-    const editor = await stagehand.extract(
-      'Look at the note editor. What text is in the title field and what text is in the body area?',
-      z.object({ title: z.string(), body: z.string() }),
+    await stagehand.act('click the note title input field at the top of the editor');
+    await stagehand.act('type "Stagehand smoke test"');
+    await stagehand.act('click the large note body text area below the title');
+    await stagehand.act('type "written by an automated browser agent"');
+    await new Promise(r => setTimeout(r, 500));
+    const vals = await page.evaluate(
+      "JSON.stringify({" +
+      "title:(document.querySelector('[data-testid=title-input]')||{}).value||''," +
+      "body:(document.querySelector('[data-testid=body-input]')||{}).value||''})",
     );
-    assert.match(editor.title, /Stagehand smoke test/i, `title was "${editor.title}"`);
-    assert.match(editor.body, /automated browser agent/i, `body was "${editor.body}"`);
+    const { title, body } = JSON.parse(String(vals));
+    assert.match(title, /Stagehand smoke test/i, `title field held "${title}"`);
+    assert.match(body, /automated browser agent/i, `body field held "${body}"`);
     await stagehand.act('click the back arrow button labeled "Back to notes list"');
     await new Promise(r => setTimeout(r, 600));
-    const d = await stagehand.extract(
-      'Does the notes list contain a note titled "Stagehand smoke test"?',
-      z.object({ found: z.boolean() }),
-    );
-    assert.ok(d.found, 'new note not found in list');
+    const listText = await page.evaluate("document.body.textContent || ''");
+    assert.ok(/Stagehand smoke test/i.test(String(listText)), 'new note not visible in the list');
   });
 
   // ── 5. Dictation flow (simulated transcription in headless CI) ──────
@@ -194,17 +197,15 @@ async function main() {
 
   // ── 6. Theme toggle ─────────────────────────────────────────────────
   await test('theme toggle switches between dark and light', async () => {
-    const before = await stagehand.extract(
-      'Is the app currently in a dark color scheme or a light one?',
-      z.object({ scheme: z.enum(['dark', 'light']) }),
-    );
+    const bgProbe =
+      "Array.from(document.querySelectorAll('div'))" +
+      ".map(d=>getComputedStyle(d).backgroundColor)" +
+      ".find(c=>c && c!=='rgba(0, 0, 0, 0)') || ''";
+    const before = await page.evaluate(bgProbe);
     await stagehand.act('click the button labeled "Toggle color theme" in the top header');
     await new Promise(r => setTimeout(r, 700));
-    const after = await stagehand.extract(
-      'Is the app currently in a dark color scheme or a light one?',
-      z.object({ scheme: z.enum(['dark', 'light']) }),
-    );
-    assert.notEqual(before.scheme, after.scheme, `scheme did not change (still ${after.scheme})`);
+    const after = await page.evaluate(bgProbe);
+    assert.notEqual(before, after, `background did not change (still ${after})`);
   });
 
   await stagehand.close();
