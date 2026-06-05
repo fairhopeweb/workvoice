@@ -532,8 +532,12 @@ export default function App() {
 
       {/* install modal */}
       <Modal visible={installOpen} transparent animationType="fade" onRequestClose={() => setInstallOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(8,11,15,0.6)', alignItems: 'center', justifyContent: 'center' }}>
-          <View testID="ios-modal" style={[neo.raisedBig(t, 24), { width: '90%', maxWidth: 430, backgroundColor: t.panelUp, padding: 24 }]}>
+        <Pressable
+          testID="ios-modal-backdrop"
+          onPress={() => setInstallOpen(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(8,11,15,0.6)', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Pressable testID="ios-modal" onPress={() => {}} style={[neo.raisedBig(t, 24), { width: '90%', maxWidth: 430, backgroundColor: t.panelUp, padding: 24 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
               <View style={[neo.raisedGlow(t, 12), { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }]}>
                 <Text style={{ color: t.accent, fontWeight: '700', fontSize: 13 }}>WV</Text>
@@ -559,8 +563,8 @@ export default function App() {
             <NeoButton t={t} testID="ios-modal-close" onPress={() => setInstallOpen(false)} style={{ marginTop: 14 }}>
               <Text style={{ color: t.ink, fontWeight: '600', fontSize: 13 }}>Close</Text>
             </NeoButton>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );

@@ -99,7 +99,13 @@ async function main() {
     assert.equal(m.stepCount, 4, `expected 4 steps, saw ${m.stepCount}`);
     assert.ok(m.mentionsSafari, 'steps do not mention Safari');
     assert.ok(m.mentionsAddToHomeScreen, 'steps do not mention Add to Home Screen');
-    await stagehand.act('close the modal');
+    await stagehand.act('click the "Close" button inside the modal');
+    await new Promise(r => setTimeout(r, 800));
+    const closed = await stagehand.extract(
+      'Is a modal dialog currently open on top of the app?',
+      z.object({ isModalOpen: z.boolean() }),
+    );
+    assert.ok(!closed.isModalOpen, 'modal failed to close — would block all later interactions');
   });
 
   // ── 3. Notes list, search and filters ───────────────────────────────
