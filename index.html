@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkVoice — Private Voice Notes</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WorkVoice">
+<meta name="theme-color" content="#0e1012">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Spline+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1012; --bg2:#14171a; --panel:#191d21; --panel2:#1f2429;
+  --line:#2a3138; --line2:#343c45;
+  --ink:#e8ebee; --ink2:#9aa4ae; --ink3:#5d6770;
+  --accent:#ffb224; --accent-dim:#a8731a; --accent-ink:#16110a;
+  --rec:#ff4d3d; --ok:#3ddc84;
+  --shadow:0 14px 40px rgba(0,0,0,.45);
+  --grain:radial-gradient(ellipse at 20% -10%, rgba(255,178,36,.06), transparent 50%),
+          radial-gradient(ellipse at 90% 110%, rgba(61,220,132,.04), transparent 45%);
+}
+[data-theme="light"]{
+  --bg:#f2efe9; --bg2:#eae6de; --panel:#fbf9f4; --panel2:#ffffff;
+  --line:#ddd6c9; --line2:#cdc4b3;
+  --ink:#1d2126; --ink2:#5b6068; --ink3:#9aa0a8;
+  --accent:#d97b00; --accent-dim:#a35e02; --accent-ink:#fff;
+  --rec:#d92d20; --ok:#1a9c5b;
+  --shadow:0 14px 40px rgba(60,50,20,.14);
+  --grain:radial-gradient(ellipse at 20% -10%, rgba(217,123,0,.07), transparent 50%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Spline Sans',sans-serif;background:var(--bg);color:var(--ink);
+  background-image:var(--grain); overflow:hidden;
+  transition:background .3s,color .3s;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font:inherit;color:inherit}
+::selection{background:var(--accent);color:var(--accent-ink)}
+
+.app{display:grid;grid-template-columns:300px 1fr;height:100vh}
+
+/* ============ SIDEBAR ============ */
+.side{border-right:1px solid var(--line);background:var(--bg2);display:flex;flex-direction:column;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 16px 12px}
+.brand .mark{
+  width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-family:'Archivo';font-weight:800;font-size:15px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.2), 0 4px 14px rgba(255,178,36,.25);
+}
+.brand h1{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.02em}
+.brand h1 span{color:var(--accent)}
+.brand .priv{
+  margin-left:auto;font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.12em;
+  color:var(--ink3);border:1px solid var(--line);border-radius:99px;padding:3px 8px;text-transform:uppercase
+}
+.searchwrap{padding:6px 14px 10px}
+.search{
+  width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  padding:9px 12px 9px 32px;color:var(--ink);outline:none;font-size:13px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237a848d' stroke-width='2.4'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:10px center;
+}
+.search:focus{border-color:var(--accent-dim)}
+.filters{display:flex;gap:6px;padding:0 14px 12px;flex-wrap:wrap}
+.chip{
+  font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.04em;color:var(--ink2);
+  border:1px solid var(--line);border-radius:99px;padding:5px 11px;transition:.15s
+}
+.chip:hover{border-color:var(--line2);color:var(--ink)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.notelist{flex:1;overflow-y:auto;padding:4px 10px 14px}
+.notelist::-webkit-scrollbar{width:8px}
+.notelist::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.ncard{
+  padding:11px 12px;border-radius:10px;border:1px solid transparent;cursor:pointer;
+  margin-bottom:6px;transition:.15s;position:relative
+}
+.ncard:hover{background:var(--panel)}
+.ncard.sel{background:var(--panel2);border-color:var(--line2);box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.ncard.sel::before{
+  content:'';position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--accent)
+}
+.ncard h3{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:18px}
+.ncard p{font-size:12px;color:var(--ink2);margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+.nmeta{display:flex;align-items:center;gap:8px;margin-top:7px;font-family:'IBM Plex Mono';font-size:9.5px;color:var(--ink3)}
+.nmeta .tagv{display:inline-flex;align-items:center;gap:4px;color:var(--accent)}
+.starbtn{position:absolute;top:9px;right:8px;color:var(--ink3);font-size:13px;padding:2px}
+.starbtn.on{color:var(--accent)}
+.empty-list{padding:30px 16px;text-align:center;color:var(--ink3);font-size:12.5px}
+.newbtn{
+  margin:0 14px 16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:13px;
+  border-radius:10px;padding:11px;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 6px 18px rgba(255,178,36,.22);transition:.15s
+}
+.newbtn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+
+/* ============ MAIN ============ */
+.main{display:flex;flex-direction:column;min-width:0;position:relative}
+.topbar{
+  display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb, var(--bg) 70%, transparent);backdrop-filter:blur(8px)
+}
+.topbar .when{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink3);letter-spacing:.05em}
+.topbar .grow{flex:1}
+.tbtn{
+  width:34px;height:34px;border-radius:9px;border:1px solid var(--line);display:grid;place-items:center;
+  color:var(--ink2);transition:.15s;font-size:14px
+}
+.tbtn:hover{border-color:var(--line2);color:var(--ink);background:var(--panel)}
+.tbtn.danger:hover{color:var(--rec);border-color:var(--rec)}
+.tbtn.on{color:var(--accent);border-color:var(--accent-dim)}
+
+.toolbar{
+  display:flex;align-items:center;gap:4px;padding:8px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap
+}
+.fmt{
+  min-width:30px;height:30px;padding:0 8px;border-radius:7px;color:var(--ink2);font-size:13px;
+  display:grid;place-items:center;transition:.12s;font-family:'Archivo'
+}
+.fmt:hover{background:var(--panel);color:var(--ink)}
+.fmt.b{font-weight:800}.fmt.i{font-style:italic}.fmt.u{text-decoration:underline}
+.fsep{width:1px;height:18px;background:var(--line);margin:0 6px}
+
+.editorwrap{flex:1;overflow-y:auto;padding:34px 0 140px}
+.editorwrap::-webkit-scrollbar{width:10px}
+.editorwrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+.sheet{max-width:760px;margin:0 auto;padding:0 48px}
+.titlein{
+  width:100%;background:none;border:none;outline:none;color:var(--ink);
+  font-family:'Archivo';font-weight:800;font-size:34px;letter-spacing:-.025em;line-height:1.15;margin-bottom:6px
+}
+.titlein::placeholder{color:var(--ink3)}
+.docmeta{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink3);letter-spacing:.06em;margin-bottom:22px;display:flex;gap:14px}
+.audioblock{
+  display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;margin-bottom:22px
+}
+.playbtn{
+  width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;flex-shrink:0;font-size:13px
+}
+.audioblock .bars{flex:1;display:flex;align-items:center;gap:2px;height:26px;overflow:hidden}
+.audioblock .bars i{flex:1;background:var(--line2);border-radius:2px;min-width:2px;transition:background .2s}
+.audioblock .bars i.lit{background:var(--accent)}
+.audioblock .alen{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink2)}
+.editor{
+  min-height:340px;outline:none;font-size:15.5px;line-height:1.75;color:var(--ink)
+}
+.editor:empty::before{content:attr(data-ph);color:var(--ink3)}
+.editor h1{font-family:'Archivo';font-size:24px;margin:18px 0 8px;letter-spacing:-.02em}
+.editor h2{font-family:'Archivo';font-size:19px;margin:16px 0 6px;letter-spacing:-.015em}
+.editor p{margin:0 0 10px}
+.editor .vt{
+  border-left:3px solid var(--accent);padding:2px 0 2px 14px;margin:14px 0;color:var(--ink);
+}
+.editor .vt .vtlabel{
+  display:block;font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.12em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:4px
+}
+
+/* ============ RECORD DOCK ============ */
+.dock{
+  position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;z-index:30
+}
+.recbtn{
+  width:62px;height:62px;border-radius:50%;background:var(--rec);color:#fff;font-size:21px;
+  display:grid;place-items:center;box-shadow:0 10px 30px rgba(255,77,61,.4), 0 0 0 1px rgba(0,0,0,.25);
+  transition:.18s;position:relative
+}
+.recbtn:hover{transform:scale(1.06)}
+.recbtn .ring{position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--rec);opacity:0;}
+body.recording .recbtn .ring{animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.85);opacity:.8}100%{transform:scale(1.25);opacity:0}}
+.dockhint{
+  font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;color:var(--ink3);text-transform:uppercase;
+  background:var(--panel);border:1px solid var(--line);padding:7px 12px;border-radius:99px
+}
+
+/* ============ RECORD PANEL ============ */
+.recpanel{
+  position:absolute;left:50%;bottom:0;transform:translate(-50%,110%);width:min(680px,92%);
+  background:var(--panel2);border:1px solid var(--line2);border-radius:18px 18px 0 0;
+  box-shadow:var(--shadow);z-index:40;padding:20px 24px 24px;transition:transform .35s cubic-bezier(.2,.9,.25,1)
+}
+body.recording .recpanel{transform:translate(-50%,0)}
+.rechead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.recdot{width:9px;height:9px;border-radius:50%;background:var(--rec);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.recstate{font-family:'Archivo';font-weight:700;font-size:14px;letter-spacing:.02em}
+.rectime{font-family:'IBM Plex Mono';font-size:13px;color:var(--ink2);margin-left:auto}
+.recmode{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase}
+#wave{width:100%;height:64px;display:block;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.livebox{
+  margin-top:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;max-height:120px;overflow-y:auto;font-size:14px;line-height:1.6;color:var(--ink)
+}
+.livebox .interim{color:var(--ink3)}
+.livebox:empty::before{content:'Listening…';color:var(--ink3);font-family:'IBM Plex Mono';font-size:11px}
+.recactions{display:flex;gap:10px;margin-top:16px}
+.ract{
+  flex:1;padding:11px;border-radius:10px;font-weight:600;font-size:13px;border:1px solid var(--line2);transition:.15s
+}
+.ract:hover{border-color:var(--ink3)}
+.ract.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ract.primary:hover{filter:brightness(1.07)}
+
+/* toast */
+.toast{
+  position:absolute;top:16px;left:50%;transform:translate(-50%,-150%);z-index:60;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px 16px;
+  font-size:12.5px;box-shadow:var(--shadow);transition:transform .3s;max-width:480px;text-align:center
+}
+.toast.show{transform:translate(-50%,0)}
+.toast b{color:var(--accent)}
+
+.nosel{flex:1;display:grid;place-items:center;color:var(--ink3)}
+.nosel .inner{text-align:center}
+.nosel .glyph{font-size:40px;margin-bottom:10px;opacity:.5}
+.nosel p{font-size:13px}
+
+/* ============ SIDEBAR NAV ============ */
+.nav{display:flex;gap:6px;padding:2px 14px 10px}
+.navbtn{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:12.5px;font-weight:600;color:var(--ink2);
+  border:1px solid var(--line);border-radius:9px;padding:8px;transition:.15s
+}
+.navbtn:hover{color:var(--ink);border-color:var(--line2)}
+.navbtn.on{background:var(--panel2);color:var(--ink);border-color:var(--line2)}
+.navbtn.on .navdot{background:var(--accent)}
+.navdot{width:6px;height:6px;border-radius:50%;background:var(--ink3)}
+
+/* ============ DASHBOARD ============ */
+.dash{flex:1;overflow-y:auto;padding:0 0 140px}
+.dash::-webkit-scrollbar{width:10px}
+.dash::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+.dashin{max-width:880px;margin:0 auto;padding:38px 48px 0}
+.dashtop{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.dash h2.greet{font-family:'Archivo';font-weight:800;font-size:32px;letter-spacing:-.025em;line-height:1.1}
+.dash .sub{color:var(--ink2);font-size:13.5px;margin-top:6px}
+.dashtop .grow{flex:1}
+.iosbtn{
+  display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:var(--bg);
+  font-weight:600;font-size:13px;border-radius:10px;padding:11px 16px;transition:.15s;
+  box-shadow:0 6px 18px rgba(0,0,0,.3)
+}
+.iosbtn:hover{transform:translateY(-1px);filter:brightness(1.1)}
+.iosbtn .apl{font-size:16px;line-height:1}
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 28px}
+.stat{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;
+  position:relative;overflow:hidden
+}
+.stat::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);opacity:.6}
+.stat .num{font-family:'Archivo';font-weight:800;font-size:28px;letter-spacing:-.02em}
+.stat .lbl{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-top:4px}
+.dashsec{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 12px}
+.qrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:30px}
+.qact{
+  display:flex;align-items:center;gap:14px;text-align:left;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;padding:16px;transition:.15s
+}
+.qact:hover{border-color:var(--line2);transform:translateY(-1px)}
+.qact .qicon{
+  width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex-shrink:0;
+  background:var(--accent);color:var(--accent-ink)
+}
+.qact.alt .qicon{background:var(--panel2);border:1px solid var(--line2);color:var(--ink)}
+.qact h4{font-size:14px;font-weight:600}
+.qact p{font-size:12px;color:var(--ink2);margin-top:2px}
+.dgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.dcard{
+  text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:15px 16px;transition:.15s;position:relative
+}
+.dcard:hover{border-color:var(--line2);transform:translateY(-1px)}
+.dcard h4{font-size:13.5px;font-weight:600;padding-right:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dcard p{font-size:12px;color:var(--ink2);margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+.dcard .dmeta{display:flex;gap:10px;margin-top:10px;font-family:'IBM Plex Mono';font-size:9.5px;color:var(--ink3)}
+.dcard .dmeta .tagv{color:var(--accent)}
+.dcard .dstar{position:absolute;top:11px;right:11px;color:var(--accent);font-size:12px}
+@media (max-width:860px){.statrow{grid-template-columns:repeat(2,1fr)}.qrow,.dgrid{grid-template-columns:1fr}.dashin{padding:30px 22px 0}}
+
+/* ============ INSTALL MODAL ============ */
+.modal-bg{
+  position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);
+  z-index:80;display:none;align-items:center;justify-content:center
+}
+.modal-bg.open{display:flex}
+.modal{
+  width:min(420px,90%);background:var(--panel2);border:1px solid var(--line2);border-radius:18px;
+  box-shadow:var(--shadow);padding:24px;animation:mpop .25s cubic-bezier(.2,.9,.3,1.2)
+}
+@keyframes mpop{from{transform:translateY(14px) scale(.97);opacity:0}}
+.modal h3{font-family:'Archivo';font-weight:800;font-size:18px;display:flex;align-items:center;gap:10px}
+.modal h3 .micon{
+  width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:15px;font-weight:800;font-family:'Archivo'
+}
+.modal .msub{font-size:12.5px;color:var(--ink2);margin:8px 0 16px;line-height:1.5}
+.step{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+.step .snum{
+  width:24px;height:24px;border-radius:50%;background:var(--panel);border:1px solid var(--line2);
+  display:grid;place-items:center;font-family:'IBM Plex Mono';font-size:11px;color:var(--accent);flex-shrink:0
+}
+.step .stext{font-size:13px;line-height:1.5}
+.step .stext b{color:var(--ink)}
+.step .stext .kbd{
+  font-family:'IBM Plex Mono';font-size:11px;border:1px solid var(--line2);border-radius:5px;
+  padding:1px 6px;background:var(--panel)
+}
+.modal .mfoot{margin-top:16px;display:flex;gap:10px}
+.modal .mfoot .ract{flex:1}
+.mnote{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--ink3);margin-top:12px;letter-spacing:.04em;line-height:1.6}
+
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">WV</div>
+      <h1>Work<span>Voice</span></h1>
+      <div class="priv">on-device</div>
+    </div>
+    <div class="nav">
+      <button class="navbtn on" id="navDash"><span class="navdot"></span>Dashboard</button>
+      <button class="navbtn" id="navNotes"><span class="navdot"></span>Notes</button>
+    </div>
+    <div class="searchwrap">
+      <input class="search" id="search" placeholder="Search notes…">
+    </div>
+    <div class="filters" id="filters">
+      <button class="chip on" data-f="all">ALL</button>
+      <button class="chip" data-f="starred">★ STARRED</button>
+      <button class="chip" data-f="voice">🎙 VOICE</button>
+      <button class="chip" data-f="recent">RECENT</button>
+    </div>
+    <div class="notelist" id="notelist"></div>
+    <button class="newbtn" id="newbtn">＋ New note</button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="toast" id="toast"></div>
+
+    <!-- DASHBOARD -->
+    <div class="dash" id="dashview">
+      <div class="dashin">
+        <div class="dashtop">
+          <div>
+            <h2 class="greet" id="greet">Good morning</h2>
+            <div class="sub">Everything stays on this device. Nothing is uploaded.</div>
+          </div>
+          <div class="grow"></div>
+          <button class="iosbtn" id="iosbtn"><span class="apl"></span> Install on iOS</button>
+        </div>
+        <div class="statrow" id="statrow"></div>
+        <div class="dashsec">Quick actions</div>
+        <div class="qrow">
+          <button class="qact" id="qDictate">
+            <div class="qicon">🎙</div>
+            <div><h4>New dictation</h4><p>Record and transcribe straight into a fresh note</p></div>
+          </button>
+          <button class="qact alt" id="qNote">
+            <div class="qicon">✏️</div>
+            <div><h4>New written note</h4><p>Skip the mic and start typing</p></div>
+          </button>
+        </div>
+        <div class="dashsec">Recent notes</div>
+        <div class="dgrid" id="dgrid"></div>
+      </div>
+    </div>
+
+    <div id="editorview" style="display:none;flex-direction:column;flex:1;min-height:0">
+      <div class="topbar">
+        <span class="when" id="whenlabel"></span>
+        <div class="grow"></div>
+        <button class="tbtn" id="starTop" title="Star note">★</button>
+        <button class="tbtn" id="themebtn" title="Toggle theme">◐</button>
+        <button class="tbtn danger" id="delbtn" title="Delete note">🗑</button>
+      </div>
+      <div class="toolbar">
+        <button class="fmt" data-cmd="formatBlock" data-val="h1" title="Header">H1</button>
+        <button class="fmt" data-cmd="formatBlock" data-val="h2" title="Sub-header">H2</button>
+        <button class="fmt" data-cmd="formatBlock" data-val="p" title="Body text">¶</button>
+        <div class="fsep"></div>
+        <button class="fmt b" data-cmd="bold" title="Bold">B</button>
+        <button class="fmt i" data-cmd="italic" title="Italic">I</button>
+        <button class="fmt u" data-cmd="underline" title="Underline">U</button>
+        <div class="fsep"></div>
+        <button class="fmt" data-cmd="justifyLeft" title="Align left">⇤</button>
+        <button class="fmt" data-cmd="justifyCenter" title="Center">⇔</button>
+        <button class="fmt" data-cmd="justifyRight" title="Align right">⇥</button>
+      </div>
+      <div class="editorwrap">
+        <div class="sheet">
+          <input class="titlein" id="titlein" placeholder="Untitled note">
+          <div class="docmeta"><span id="metaWords">0 words</span><span id="metaTag"></span></div>
+          <div id="audioslot"></div>
+          <div class="editor" id="editor" contenteditable="true" data-ph="Start typing, or hit the mic to dictate…"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nosel" id="nosel" style="display:none">
+      <div class="inner">
+        <div class="glyph">🎙</div>
+        <p>Select a note or create a new one.</p>
+      </div>
+    </div>
+
+    <!-- install modal -->
+    <div class="modal-bg" id="iosmodal">
+      <div class="modal">
+        <h3><span class="micon">WV</span> Install WorkVoice on iOS</h3>
+        <p class="msub">WorkVoice installs as a full-screen app on your home screen — icon, offline shell, no browser chrome.</p>
+        <div class="step"><div class="snum">1</div><div class="stext">Open this page in <b>Safari</b> on your iPhone or iPad.</div></div>
+        <div class="step"><div class="snum">2</div><div class="stext">Tap the <b>Share</b> button <span class="kbd">⬆︎</span> in the toolbar.</div></div>
+        <div class="step"><div class="snum">3</div><div class="stext">Scroll down and tap <b>Add to Home Screen</b>.</div></div>
+        <div class="step"><div class="snum">4</div><div class="stext">Tap <b>Add</b> — launch <b>WorkVoice</b> from your home screen.</div></div>
+        <div class="mfoot">
+          <button class="ract" id="iosClose">Close</button>
+          <button class="ract primary" id="iosCopy">Copy page link</button>
+        </div>
+        <div class="mnote">iOS only allows installs through Safari's share sheet — no one-tap install API exists. On Android/desktop Chrome, you may see a native install prompt instead.</div>
+      </div>
+    </div>
+
+    <!-- record dock -->
+    <div class="dock" id="dock">
+      <div class="dockhint">tap to dictate</div>
+      <button class="recbtn" id="recbtn" title="Record voice note"><span class="ring"></span><span id="recglyph">🎙</span></button>
+    </div>
+
+    <!-- record panel -->
+    <div class="recpanel" id="recpanel">
+      <div class="rechead">
+        <div class="recdot"></div>
+        <div>
+          <div class="recstate">Recording</div>
+          <div class="recmode" id="recmode">whisper-style on-device transcription</div>
+        </div>
+        <div class="rectime" id="rectime">00:00</div>
+      </div>
+      <canvas id="wave"></canvas>
+      <div class="livebox" id="livebox"></div>
+      <div class="recactions">
+        <button class="ract" id="recCancel">Discard</button>
+        <button class="ract primary" id="recDone">■ Stop &amp; insert transcript</button>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+/* ================= WorkVoice demo =================
+   Original browser re-implementation of the NotelyVoice concept.
+   Voice → text via Web Speech API (with a simulated fallback when
+   mic / speech recognition isn't available in this preview frame).
+=================================================== */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const now=()=>Date.now();
+const fmtDate=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+let notes=[
+ {id:1,title:'Sprint 24 standup recap',tag:'work',starred:true,hasAudio:false,audio:null,created:now()-86400e3*1,updated:now()-3600e3*2,
+  html:'<h2>Blockers</h2><p>CI runner queue is backed up — infra is adding two more agents this week.</p><h2>Decisions</h2><p>We will ship the export feature behind a flag on Friday and <b>hold the schema migration</b> until Monday.</p>'},
+ {id:2,title:'Client call — Meridian onboarding',tag:'voice',starred:false,hasAudio:true,audio:null,created:now()-86400e3*2,updated:now()-86400e3*2,
+  html:'<div class="vt"><span class="vtlabel">Voice transcript</span><p>They want single sign-on before the pilot expands past fifty seats. Procurement review starts the second week of the month, so the security questionnaire needs to go out before then.</p></div><p>Follow-up: send SSO docs + SOC 2 letter.</p>'},
+ {id:3,title:'Ideas parking lot',tag:'personal',starred:false,hasAudio:false,audio:null,created:now()-86400e3*6,updated:now()-86400e3*5,
+  html:'<p>Voice-first changelog dictation. <i>Auto-summarize</i> long transcripts into action items. Keyboard shortcut to drop a timestamp marker mid-recording.</p>'}
+];
+let sel=notes[0].id, filter='all', query='';
+
+/* ---------- list rendering ---------- */
+function strip(html){const d=document.createElement('div');d.innerHTML=html;return d.textContent||''}
+function renderList(){
+  const list=$('#notelist'); list.innerHTML='';
+  let arr=[...notes].sort((a,b)=>b.updated-a.updated);
+  if(filter==='starred')arr=arr.filter(n=>n.starred);
+  if(filter==='voice')arr=arr.filter(n=>n.hasAudio||n.html.includes('class="vt"'));
+  if(filter==='recent')arr=arr.filter(n=>now()-n.updated<86400e3*3);
+  if(query)arr=arr.filter(n=>(n.title+' '+strip(n.html)).toLowerCase().includes(query));
+  if(!arr.length){list.innerHTML='<div class="empty-list">No notes match.</div>';return}
+  for(const n of arr){
+    const el=document.createElement('div');
+    el.className='ncard'+(n.id===sel?' sel':'');
+    el.innerHTML=`<h3>${esc(n.title)||'Untitled note'}</h3>
+      <p>${esc(strip(n.html)).slice(0,120)}</p>
+      <div class="nmeta">${n.hasAudio?'<span class="tagv">🎙 audio</span>':''}<span>${fmtDate(n.updated)}</span><span>#${n.tag}</span></div>
+      <button class="starbtn ${n.starred?'on':''}" data-star="${n.id}">★</button>`;
+    el.addEventListener('click',e=>{
+      if(e.target.dataset.star){toggleStar(+e.target.dataset.star);return}
+      select(n.id);
+    });
+    list.appendChild(el);
+  }
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function toggleStar(id){const n=notes.find(x=>x.id===id);n.starred=!n.starred;renderList();if(id===sel)syncTop()}
+
+/* ---------- editor ---------- */
+function cur(){return notes.find(n=>n.id===sel)}
+function showView(v){
+  $('#dashview').style.display=v==='dash'?'block':'none';
+  $('#editorview').style.display=v==='editor'?'flex':'none';
+  $('#nosel').style.display='none';
+  $('#navDash').classList.toggle('on',v==='dash');
+  $('#navNotes').classList.toggle('on',v==='editor');
+  if(v==='dash')renderDash();
+}
+function select(id){
+  saveCurrent(); sel=id; const n=cur();
+  showView('editor');
+  $('#titlein').value=n.title; $('#editor').innerHTML=n.html;
+  $('#whenlabel').textContent='EDITED '+fmtDate(n.updated).toUpperCase();
+  $('#metaTag').textContent='#'+n.tag;
+  renderAudioSlot(n); syncTop(); countWords(); renderList();
+}
+function syncTop(){const n=cur(); if(!n)return; $('#starTop').classList.toggle('on',n.starred)}
+function saveCurrent(){
+  const n=cur(); if(!n)return;
+  n.title=$('#titlein').value; n.html=$('#editor').innerHTML; 
+}
+function touch(){const n=cur(); if(!n)return; n.updated=now(); saveCurrent(); renderList(); countWords()}
+function countWords(){
+  const t=strip($('#editor').innerHTML).trim();
+  $('#metaWords').textContent=(t?t.split(/\s+/).length:0)+' words';
+}
+$('#titlein').addEventListener('input',touch);
+$('#editor').addEventListener('input',touch);
+$$('.fmt').forEach(b=>b.addEventListener('click',()=>{
+  document.execCommand(b.dataset.cmd,false,b.dataset.val||null); $('#editor').focus(); touch();
+}));
+$('#starTop').addEventListener('click',()=>toggleStar(sel));
+$('#delbtn').addEventListener('click',()=>{
+  notes=notes.filter(n=>n.id!==sel);
+  if(notes.length){select(notes[0].id)}else{
+    sel=null;showView('dash');renderList();
+  }
+  toast('Note deleted');
+});
+$('#newbtn').addEventListener('click',()=>{
+  saveCurrent();
+  const n={id:now(),title:'',tag:'work',starred:false,hasAudio:false,audio:null,created:now(),updated:now(),html:''};
+  notes.unshift(n); select(n.id); $('#titlein').focus();
+});
+
+/* ---------- search & filters ---------- */
+$('#search').addEventListener('input',e=>{query=e.target.value.toLowerCase();renderList()});
+$$('#filters .chip').forEach(c=>c.addEventListener('click',()=>{
+  $$('#filters .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');
+  filter=c.dataset.f;renderList();
+}));
+
+/* ---------- theme ---------- */
+$('#themebtn').addEventListener('click',()=>{
+  const h=document.documentElement;
+  h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';
+});
+
+/* ---------- audio block ---------- */
+let playingEl=null;
+function renderAudioSlot(n){
+  const slot=$('#audioslot'); slot.innerHTML='';
+  if(!n.hasAudio)return;
+  const bars=Array.from({length:42},()=> '<i style="height:'+(20+Math.random()*80)+'%"></i>').join('');
+  slot.innerHTML=`<div class="audioblock">
+    <button class="playbtn" id="playbtn">▶</button>
+    <div class="bars" id="abars">${bars}</div>
+    <span class="alen">${n.audioLen||'voice memo'}</span></div>`;
+  $('#playbtn').addEventListener('click',()=>playNote(n));
+}
+function playNote(n){
+  if(!n.audio){toast('Demo note — no audio file attached. Record one to hear playback.');return}
+  const a=new Audio(URL.createObjectURL(n.audio)); a.play();
+  const bars=$$('#abars i'); let i=0;
+  const iv=setInterval(()=>{if(i<bars.length)bars[i++].classList.add('lit');},(a.duration*1000||3000)/bars.length);
+  a.onended=()=>{clearInterval(iv);bars.forEach(b=>b.classList.remove('lit'))};
+}
+
+/* ---------- recording ---------- */
+let rec={active:false,start:0,timer:null,stream:null,mr:null,chunks:[],sr:null,final:'',sim:null,ctx:null,raf:null};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+$('#recbtn').addEventListener('click',()=>rec.active?stopRec(true):startRec());
+$('#recDone').addEventListener('click',()=>stopRec(true));
+$('#recCancel').addEventListener('click',()=>stopRec(false));
+
+async function startRec(){
+  if(!sel){$('#newbtn').click()}
+  else if($('#dashview').style.display!=='none'){select(sel)}
+  rec.active=true; rec.start=now(); rec.final=''; rec.chunks=[];
+  document.body.classList.add('recording');
+  $('#livebox').innerHTML=''; $('#rectime').textContent='00:00';
+  rec.timer=setInterval(()=>{
+    const s=Math.floor((now()-rec.start)/1000);
+    $('#rectime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  },250);
+
+  // mic + waveform + MediaRecorder
+  let gotMic=false;
+  try{
+    rec.stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    gotMic=true;
+    rec.mr=new MediaRecorder(rec.stream);
+    rec.mr.ondataavailable=e=>rec.chunks.push(e.data);
+    rec.mr.start();
+    startWave(rec.stream);
+  }catch(e){ startWave(null); }
+
+  // speech recognition
+  let gotSR=false;
+  if(SR&&gotMic){
+    try{
+      rec.sr=new SR(); rec.sr.continuous=true; rec.sr.interimResults=true; rec.sr.lang=navigator.language||'en-US';
+      rec.sr.onresult=ev=>{
+        let interim='';
+        for(let i=ev.resultIndex;i<ev.results.length;i++){
+          const r=ev.results[i];
+          if(r.isFinal)rec.final+=r[0].transcript+' ';else interim+=r[0].transcript;
+        }
+        $('#livebox').innerHTML=esc(rec.final)+'<span class="interim">'+esc(interim)+'</span>';
+        $('#livebox').scrollTop=1e6;
+      };
+      rec.sr.onerror=()=>{ if(!rec.final) startSim(); };
+      rec.sr.start(); gotSR=true;
+      $('#recmode').textContent='live on-device dictation';
+    }catch(e){}
+  }
+  if(!gotSR){ startSim(); }
+}
+
+function startSim(){
+  $('#recmode').textContent='simulated transcription (mic / speech API unavailable in this preview)';
+  const words=('Quick note from the demo recorder. Action items for this week: confirm the staging deploy, '+
+    'send the onboarding checklist to the new contractor, and review the open pull requests before Friday. '+
+    'Also remember to follow up on the invoice that went out Monday.').split(' ');
+  let i=0;
+  rec.sim=setInterval(()=>{
+    if(i>=words.length){clearInterval(rec.sim);return}
+    rec.final+=words[i++]+' ';
+    $('#livebox').innerHTML=esc(rec.final);
+    $('#livebox').scrollTop=1e6;
+  },180);
+}
+
+function startWave(stream){
+  const cv=$('#wave'),ctx2=cv.getContext('2d');
+  cv.width=cv.offsetWidth*2;cv.height=cv.offsetHeight*2;
+  let analyser=null,data=null;
+  if(stream){
+    rec.ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=rec.ctx.createMediaStreamSource(stream);
+    analyser=rec.ctx.createAnalyser();analyser.fftSize=256;src.connect(analyser);
+    data=new Uint8Array(analyser.frequencyBinCount);
+  }
+  const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  function draw(){
+    if(!rec.active)return;
+    rec.raf=requestAnimationFrame(draw);
+    ctx2.clearRect(0,0,cv.width,cv.height);
+    const N=64,bw=cv.width/N;
+    for(let i=0;i<N;i++){
+      let v;
+      if(analyser){analyser.getByteFrequencyData(data);v=data[Math.floor(i*data.length/N)]/255}
+      else{v=.15+.5*Math.abs(Math.sin(now()/300+i*.6))*Math.random()}
+      const h=Math.max(4,v*cv.height*.9);
+      ctx2.fillStyle=accent;
+      ctx2.globalAlpha=.35+v*.65;
+      ctx2.fillRect(i*bw+bw*.25,(cv.height-h)/2,bw*.5,h);
+    }
+    ctx2.globalAlpha=1;
+  }
+  draw();
+}
+
+function stopRec(keep){
+  rec.active=false;
+  document.body.classList.remove('recording');
+  clearInterval(rec.timer);clearInterval(rec.sim);cancelAnimationFrame(rec.raf);
+  try{rec.sr&&rec.sr.stop()}catch(e){}
+  let audioBlobReady=null;
+  if(rec.mr&&rec.mr.state!=='inactive'){
+    audioBlobReady=new Promise(res=>{rec.mr.onstop=()=>res(new Blob(rec.chunks,{type:rec.mr.mimeType}));rec.mr.stop()});
+  }
+  if(rec.stream)rec.stream.getTracks().forEach(t=>t.stop());
+  if(rec.ctx){try{rec.ctx.close()}catch(e){}}
+  if(!keep){toast('Recording discarded');return}
+
+  const text=rec.final.trim();
+  const n=cur(); if(!n)return;
+  const secs=Math.max(1,Math.round((now()-rec.start)/1000));
+  if(text){
+    $('#editor').innerHTML+=`<div class="vt"><span class="vtlabel">Voice transcript · ${secs}s</span><p>${esc(text)}</p></div>`;
+  }
+  if(audioBlobReady){
+    audioBlobReady.then(b=>{n.audio=b;n.hasAudio=true;n.audioLen=secs+'s';renderAudioSlot(n);renderList()});
+  }
+  if(!n.title&&text)$('#titlein').value=n.title=text.split(' ').slice(0,6).join(' ');
+  touch();
+  toast(text?'Transcript inserted into note':'Stopped — no speech captured');
+}
+
+/* ---------- toast ---------- */
+let toastT=null;
+function toast(msg){
+  const t=$('#toast'); t.innerHTML=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+/* ---------- dashboard ---------- */
+function renderDash(){
+  const h=new Date().getHours();
+  $('#greet').textContent=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  const totalWords=notes.reduce((a,n)=>{const t=strip(n.html).trim();return a+(t?t.split(/\s+/).length:0)},0);
+  const voiceCt=notes.filter(n=>n.hasAudio||n.html.includes('class="vt"')).length;
+  const starCt=notes.filter(n=>n.starred).length;
+  $('#statrow').innerHTML=[
+    [notes.length,'Notes'],[voiceCt,'Voice notes'],[starCt,'Starred'],[totalWords.toLocaleString(),'Words captured']
+  ].map(([n,l])=>`<div class="stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+  const recent=[...notes].sort((a,b)=>b.updated-a.updated).slice(0,4);
+  $('#dgrid').innerHTML=recent.length?recent.map(n=>`
+    <button class="dcard" data-open="${n.id}">
+      ${n.starred?'<span class="dstar">★</span>':''}
+      <h4>${esc(n.title)||'Untitled note'}</h4>
+      <p>${esc(strip(n.html)).slice(0,140)}</p>
+      <div class="dmeta">${n.hasAudio?'<span class="tagv">🎙 audio</span>':''}<span>${fmtDate(n.updated)}</span><span>#${n.tag}</span></div>
+    </button>`).join(''):'<div class="empty-list">No notes yet — dictate your first one.</div>';
+  $$('#dgrid .dcard').forEach(c=>c.addEventListener('click',()=>select(+c.dataset.open)));
+}
+$('#navDash').addEventListener('click',()=>{saveCurrent();showView('dash')});
+$('#navNotes').addEventListener('click',()=>{
+  if(sel)select(sel); else if(notes.length)select(notes[0].id); else $('#newbtn').click();
+});
+$('#qNote').addEventListener('click',()=>$('#newbtn').click());
+$('#qDictate').addEventListener('click',()=>{$('#newbtn').click();startRec()});
+
+/* ---------- iOS install ---------- */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e});
+$('#iosbtn').addEventListener('click',async()=>{
+  const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(!isiOS&&deferredPrompt){ // native prompt on Android/desktop Chrome
+    deferredPrompt.prompt(); const r=await deferredPrompt.userChoice; deferredPrompt=null;
+    toast(r.outcome==='accepted'?'<b>WorkVoice</b> installed':'Install dismissed');
+    return;
+  }
+  $('#iosmodal').classList.add('open');
+});
+$('#iosClose').addEventListener('click',()=>$('#iosmodal').classList.remove('open'));
+$('#iosmodal').addEventListener('click',e=>{if(e.target.id==='iosmodal')e.target.classList.remove('open')});
+$('#iosCopy').addEventListener('click',async()=>{
+  try{await navigator.clipboard.writeText(location.href);toast('Link copied — open it in Safari on your iPhone')}
+  catch(e){toast('Copy blocked in this preview — use the browser address bar')}
+});
+
+/* ---------- boot ---------- */
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+renderList(); showView('dash');
+toast('<b>WorkVoice</b> ready — tap the mic to dictate, or install it on iOS');
+</script>
+</body>
+</html>
