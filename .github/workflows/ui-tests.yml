@@ -1,0 +1,46 @@
+name: UI Tests (Stagehand)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Test a deployed URL instead of a local build (leave empty for local)"
+        required: false
+        default: ""
+
+jobs:
+  stagehand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Stagehand (LOCAL env)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build Expo web export
+        if: ${{ github.event.inputs.base_url == '' }}
+        run: npx expo export -p web
+
+      - name: Serve build
+        if: ${{ github.event.inputs.base_url == '' }}
+        run: |
+          npx serve dist -l 4173 &
+          npx wait-on http://localhost:4173 --timeout 30000
+
+      - name: Run Stagehand UI tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:4173' }}
+        run: npm run test:ui
