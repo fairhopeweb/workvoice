@@ -27,7 +27,9 @@ jobs:
         run: npm ci
 
       - name: Install Chromium for Stagehand (LOCAL env)
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install --with-deps chromium
+          echo "CHROME_PATH=$(node -e "console.log(require('playwright-core').chromium.executablePath())")" >> "$GITHUB_ENV"
 
       - name: Build Expo web export
         if: ${{ github.event.inputs.base_url == '' }}
@@ -37,10 +39,10 @@ jobs:
         if: ${{ github.event.inputs.base_url == '' }}
         run: |
           npx serve dist -l 4173 &
-          npx wait-on http://localhost:4173 --timeout 30000
+          npx wait-on http://127.0.0.1:4173 --timeout 30000
 
       - name: Run Stagehand UI tests
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:4173' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://127.0.0.1:4173' }}
         run: npm run test:ui

@@ -14,7 +14,7 @@ import { Stagehand } from '@browserbasehq/stagehand';
 import { z } from 'zod';
 import assert from 'node:assert';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:4173';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:4173';
 const MODEL = process.env.STAGEHAND_MODEL || 'anthropic/claude-sonnet-4-5';
 
 let passed = 0;
@@ -31,6 +31,10 @@ async function test(name: string, fn: () => Promise<void>) {
     failed++;
     results.push(`  ❌ ${name}: ${e.message}`);
     console.error(`❌ ${name}\n   ${e.message}`);
+    // GitHub Actions annotation — surfaces failures in the run UI and the checks API
+    if (process.env.GITHUB_ACTIONS) {
+      console.log(`::error title=UI test failed: ${name}::${String(e.message).replace(/\n/g, ' ').slice(0, 400)}`);
+    }
   }
 }
 
@@ -39,6 +43,14 @@ async function main() {
     env: 'LOCAL',
     model: MODEL,
     verbose: 0,
+    localBrowserLaunchOptions: {
+      // Stagehand's CDP driver needs an explicit Chrome path (CHROME_PATH),
+      // and CI containers need sandbox/shm flags.
+      ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
+      headless: true,
+      chromiumSandbox: false,
+      args: ['--no-sandbox', '--disable-dev-shm-usage', '--no-proxy-server'],
+    },
   });
   await stagehand.init();
   const page = stagehand.context.pages()[0];
