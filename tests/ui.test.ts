@@ -129,7 +129,14 @@ async function main() {
     assert.equal(after.count, 1, `search should leave 1 result, saw ${after.count}`);
     assert.match(after.firstTitle, /Meridian/i, `unexpected result "${after.firstTitle}"`);
 
-    await stagehand.act('clear the search input');
+    // clear the search field deterministically (React-controlled input)
+    await page.evaluate(`
+      var el=document.querySelector('[data-testid=search-input]');
+      var set=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+      el.focus(); set.call(el,''); el.dispatchEvent(new Event('input',{bubbles:true})); true`);
+    await new Promise(r => setTimeout(r, 500));
+    const cleared = await stagehand.extract('Count the note cards now visible', z.object({ count: z.number() }));
+    assert.ok(cleared.count >= 3, `search did not clear, still ${cleared.count} cards`);
   });
 
   await test('starred filter chip shows only starred notes', async () => {
@@ -162,6 +169,14 @@ async function main() {
     assert.match(body, /automated browser agent/i, `body field held "${body}"`);
     await stagehand.act('click the back arrow button labeled "Back to notes list"');
     await new Promise(r => setTimeout(r, 600));
+    // ensure no stale filter/search hides the new note
+    await page.evaluate(`
+      var c=document.querySelector('[data-testid=chip-all]'); if(c) c.click();
+      var s=document.querySelector('[data-testid=search-input]');
+      if(s){var set=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+            set.call(s,''); s.dispatchEvent(new Event('input',{bubbles:true}));}
+      true`);
+    await new Promise(r => setTimeout(r, 500));
     const listText = await page.evaluate("document.body.textContent || ''");
     assert.ok(/Stagehand smoke test/i.test(String(listText)), 'new note not visible in the list');
   });
