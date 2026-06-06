@@ -114,20 +114,19 @@ async function main() {
   await test('notes view search narrows results', async () => {
     await stagehand.act('click the NOTES navigation tab');
     await new Promise(r => setTimeout(r, 600));
-    const before = await stagehand.extract(
-      'Count the note cards in the list',
-      z.object({ count: z.number() }),
+    const countCards = () => page.evaluate("document.querySelectorAll('[data-testid^=note-]').length");
+    const firstCardTitle = () => page.evaluate(
+      "(document.querySelector('[data-testid^=note-]')||{}).textContent || ''",
     );
-    assert.ok(before.count >= 3, `expected seed notes, saw ${before.count}`);
+    const before = Number(await countCards());
+    assert.ok(before >= 3, `expected seed notes, saw ${before}`);
 
     await stagehand.act('type "Meridian" into the search input');
-    await new Promise(r => setTimeout(r, 600));
-    const after = await stagehand.extract(
-      'Count the note cards now visible and give the title of the first one',
-      z.object({ count: z.number(), firstTitle: z.string() }),
-    );
-    assert.equal(after.count, 1, `search should leave 1 result, saw ${after.count}`);
-    assert.match(after.firstTitle, /Meridian/i, `unexpected result "${after.firstTitle}"`);
+    await new Promise(r => setTimeout(r, 700));
+    const after = Number(await countCards());
+    const firstTitle = String(await firstCardTitle());
+    assert.equal(after, 1, `search should leave 1 result, saw ${after}`);
+    assert.match(firstTitle, /Meridian/i, `unexpected result "${firstTitle}"`);
 
     // clear the search field deterministically (React-controlled input)
     await page.evaluate(`
@@ -135,18 +134,15 @@ async function main() {
       var set=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
       el.focus(); set.call(el,''); el.dispatchEvent(new Event('input',{bubbles:true})); true`);
     await new Promise(r => setTimeout(r, 500));
-    const cleared = await stagehand.extract('Count the note cards now visible', z.object({ count: z.number() }));
-    assert.ok(cleared.count >= 3, `search did not clear, still ${cleared.count} cards`);
+    const cleared = Number(await countCards());
+    assert.ok(cleared >= 3, `search did not clear, still ${cleared} cards`);
   });
 
   await test('starred filter chip shows only starred notes', async () => {
     await stagehand.act('click the STARRED filter chip');
     await new Promise(r => setTimeout(r, 600));
-    const d = await stagehand.extract(
-      'Count visible note cards and report whether each shows a highlighted star',
-      z.object({ count: z.number() }),
-    );
-    assert.equal(d.count, 1, `expected 1 starred seed note, saw ${d.count}`);
+    const count = Number(await page.evaluate("document.querySelectorAll('[data-testid^=note-]').length"));
+    assert.equal(count, 1, `expected 1 starred seed note, saw ${count}`);
     await stagehand.act('click the ALL filter chip');
   });
 
